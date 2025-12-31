@@ -1,0 +1,6 @@
+Element,Hex Value,Purpose
+Main Heading,#052016,"H1, H2 titles (Deepest Forest Green)"
+Body Text,#1F2937,Main paragraphs and data (Neutral Dark)
+Field Labels,#4B6358,"Form labels, ""Last updated,"" metadata"
+Placeholder,#9CA3AF,Input placeholders or disabled text
+Success/Action,#10B981,"Positive trends, ""Completed"" status"
