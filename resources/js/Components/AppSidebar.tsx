@@ -57,6 +57,11 @@ const items = [
         title: 'Pending Shipments',
         url: '/orders/pending',
       },
+
+      {
+        title: 'Create Order',
+        url: '/orders/create',
+      },
     ],
   },
   {

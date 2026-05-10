@@ -27,7 +27,7 @@ export default function DatePicker({
   const [date, setDate] = React.useState<Date | undefined>(undefined)
 
   return (
-    <div className={cn('flex flex-col gap-3', mainClass)}>
+    <div className={cn('flex flex-col', mainClass)}>
       <Label htmlFor={attr || 'datepicker'} className="px-1 ">
         {label}
       </Label>
