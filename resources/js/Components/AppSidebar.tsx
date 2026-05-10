@@ -71,10 +71,10 @@ const items = [
         title: 'Add New Product',
         url: '/inventory/products/add',
       },
-      {
-        title: 'Product Stock',
-        url: '/inventory/products/stock',
-      },
+      // {
+      //   title: 'Product Stock',
+      //   url: '/inventory/products/stock',
+      // },
     ],
   },
   {
@@ -145,8 +145,8 @@ export function AppSidebar() {
               {items.map((item) =>
                 item.child ? (
                   // dropdown nav item
-                  <Collapsible className="group/collapsible">
-                    <SidebarMenuItem key={item.title}>
+                  <Collapsible key={item.title} className="group/collapsible">
+                    <SidebarMenuItem>
                       <CollapsibleTrigger asChild>
                         {/* Added hover:bg-transparent and hover:text-current to keep text color stable */}
 

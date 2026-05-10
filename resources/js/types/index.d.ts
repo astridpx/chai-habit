@@ -67,6 +67,7 @@ declare global {
     name: string
     size: 'Small' | 'Medium' | 'Large'
     price: number
+    stock: number
     description: string
     created_at: string
     updated_at: string

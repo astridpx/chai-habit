@@ -46,10 +46,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // Inventory - APIs
     Route::post('/inventory/products/add', [InventoryController::class, 'store'])->name('inventory.products.store');
     Route::delete('/inventory/products/{id}', [InventoryController::class, 'destroy'])->name('inventory.products.destroy');
-    // insert a product stock
-    Route::post('/inventory/products/stock', [InventoryController::class, 'storeStock'])->name('inventory.products.storeStock');
+    Route::post('/inventory/products/{id}', [InventoryController::class, 'update'])->name('inventory.products.update');
     // update a product stock
-    Route::post('/inventory/products/stock/{id}', [InventoryController::class, 'updateStock'])->name('inventory.products.updateStock');
+    Route::post('/inventory/products/stock/{id}/{action}', [InventoryController::class, 'updateStock'])->name('inventory.products.updateStock');
 
     // reports
     Route::get('/reports/inventory-analysis', [ReportController::class, 'inventoryAnalysis'])->name('reports.inventory-analysis');

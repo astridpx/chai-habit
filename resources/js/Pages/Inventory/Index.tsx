@@ -60,24 +60,29 @@ export default function Products({ products }: { products: Pagination<Product> }
     processing,
     errors,
     reset,
-  } = useForm({
+  } = useForm<any>({
     id: '',
-    product_id: '',
-    quantity: '',
+    stock: '',
   })
 
   // handle restock product
   function handleRestockProduct(e: React.FormEvent) {
     e.preventDefault()
-    post(route('inventory.products.storeStock'), {
-      preserveScroll: true,
-      onSuccess: () => {
-        setRestockDialog({ open: false, product: '' })
-        reset()
+    post(
+      route('inventory.products.updateStock', {
+        id: data.id,
+        action: 'add',
+      }),
+      {
+        preserveScroll: true,
+        onSuccess: () => {
+          setRestockDialog({ open: false, product: '' })
+          reset()
+        },
+        // onError: (e) => console.log(e),
+        // onFinish: () => reset(),
       },
-      // onError: (e) => console.log(e),
-      // onFinish: () => reset(),
-    })
+    )
   }
 
   // handle delete product
@@ -97,7 +102,7 @@ export default function Products({ products }: { products: Pagination<Product> }
   function handleMenuAction(action: string, productId: number, productName: string) {
     switch (action) {
       case 'Restock':
-        setData('product_id', productId.toString())
+        setData('id', productId.toString())
         setRestockDialog({ open: true, product: productName })
         break
       case 'Delete':
@@ -157,14 +162,14 @@ export default function Products({ products }: { products: Pagination<Product> }
                 <Input
                   type="number"
                   id="quantity"
-                  value={data.quantity}
-                  onChange={(e) => setData('quantity', e.target.value)}
-                  name="quantity"
+                  value={data.stock}
+                  onChange={(e) => setData('stock', e.target.value)}
+                  name="stock"
                   min={0}
                 />
               </div>
             </div>
-            <p className="text-red-500">{errors.quantity || errors.product_id}</p>
+            <p className="text-red-500">{errors.stock}</p>
             <DialogFooter>
               <DialogClose asChild>
                 <Button variant="outline">Cancel</Button>
@@ -193,6 +198,7 @@ export default function Products({ products }: { products: Pagination<Product> }
               <TableHead>Item</TableHead>
               <TableHead>Size</TableHead>
               <TableHead>Price</TableHead>
+              <TableHead>Stock</TableHead>
               <TableHead>Decription</TableHead>
               <TableHead>Action</TableHead>
             </TableRow>
@@ -210,6 +216,7 @@ export default function Products({ products }: { products: Pagination<Product> }
                 </TableCell>
                 <TableCell>{product.size}</TableCell>
                 <TableCell>{product.price}</TableCell>
+                <TableCell>{product.stock}</TableCell>
                 <TableCell>{product.description}</TableCell>
                 <TableCell>
                   <DropdownMenu modal={false}>

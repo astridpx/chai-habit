@@ -13,15 +13,10 @@ class Product extends Model
         'size',
         'description',
         'price',
+        'stock',
     ];
 
     // ----- Relationships -----
-
-    // A product has many stock records
-    public function stock()
-    {
-        return $this->hasMany(ProductStock::class, 'product_id');
-    }
 
     // A product can be in many order items
     public function orderItems()

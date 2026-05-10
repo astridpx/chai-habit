@@ -1,11 +1,10 @@
 <?php
 namespace App\Http\Controllers;
 
-use App\Models\OrderItem;
 use App\Models\Product;
-use App\Models\ProductStock;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class InventoryController extends Controller
@@ -21,97 +20,12 @@ class InventoryController extends Controller
         ]);
     }
 
-    // display available products  (in stock)
-    public function stock()
-    {
-        // $products = ProductStock::latest()->whereDate('created_at', today())->paginate(10);
-
-        // Gets the most recent stock record for each product
-        $products = ProductStock::with('products')
-            ->whereIn('id', function ($query) {
-                $query->selectRaw('MAX(id)')
-                    ->from('product_stocks')
-                    ->groupBy('product_id');
-            })
-            ->paginate(10);
-
-        return Inertia::render('Inventory/ProductStock', [
-            'products' => $products,
-        ]);
-    }
-
-    // inventory restock products
-    public function addStock()
-    {
-        return Inertia::render('Inventory/AddStock');
-    }
-
-    public function storeStock(Request $request)
-    {
-        $validated = $request->validate([
-            // 'product_id' => 'required|exists:products,id',
-            'product_id' => [
-                'required',
-                'exists:products,id',
-                Rule::unique('product_stocks')->where(function ($query) use ($request) {
-                    return $query->where('product_id', $request->product_id)
-                        ->where('entry_date', $request->entry_date);
-                }),
-            ],
-            'quantity'   => 'required|integer|min:1',
-        ]);
-
-        // $alreadyExists = ProductStock::where('product_id', $validated['product_id'])
-        //     ->whereDate('created_at', now()->timezone(config('app.timezone'))->toDateString())
-        //     ->exists();
-        // if ($alreadyExists) {
-        //     return back()->withErrors(['product_id' => 'Stock for this product has already been added today.']);
-        // }
-
-        ProductStock::create([
-            'product_id' => $validated['product_id'],
-            'quantity'   => $validated['quantity'],
-            'entry_date' => now()->toDateString(),
-        ]);
-
-        return back()->with('success', 'Stock added successfully!');
-    }
-
-    // Update stcok quantity for a product
-    public function updateStock(Request $request, $id)
-    {
-
-        $validated = $request->validate([
-            'quantity' => 'required|integer|min:0',
-        ]);
-        $product = ProductStock::findOrFail($id);
-
-        // Calculate total quantity of this product currently in orders
-        $totalOrdered = OrderItem::query()
-            ->where('product_id', $product->product_id)
-            ->sum('quantity');
-
-        // Validate that the new stock level isn't lowerthanwhatisalreadypromisedtoorders;
-        if ($validated['quantity'] < $totalOrdered) {
-            return back()->withErrors([
-                'quantity' => "Cannot set stock to {$validated['quantity']}. There are already {$totalOrdered} items tied to existing orders.",
-            ]);
-        }
-
-        $product->update([
-            'quantity' => $validated['quantity'],
-        ]);
-
-        return back()->with('success', 'Stock updated successfully!');
-    }
-
     /**
      * Show the form for creating a new resource.
      */
     public function create()
     {
         return Inertia::render('Inventory/CreateProduct');
-
     }
 
     /**
@@ -130,6 +44,7 @@ class InventoryController extends Controller
             'size'        => 'required|string|in:Small,Medium,Large|max:255',
             'price'       => 'required|numeric|min:0',
             'description' => 'nullable|string',
+            'stock'       => 'integer|min:0',
         ]);
         $path = $request->file('image')->store('uploads/products', 'public');
 
@@ -140,7 +55,6 @@ class InventoryController extends Controller
         ]);
 
         return back()->with('success', 'New product created successfully!');
-
     }
 
     /**
@@ -164,7 +78,38 @@ class InventoryController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
+        $product = Product::findOrFail($id);
+
+        $validated = $request->validate([
+            'image'       => ['nullable', 'image', 'mimes:jpg,jpeg,png', 'max:4096'],
+            'name'        => ['required', 'string', 'max:255'],
+            'size'        => ['required', 'string', 'in:Small,Medium,Large'],
+            'price'       => ['required', 'numeric', 'min:0'],
+            'description' => ['nullable', 'string'],
+        ]);
+
+        return DB::transaction(function () use ($request, $product, $validated) {
+
+            if ($request->hasFile('image')) {
+                // Delete old file safely
+                if ($product->image && Storage::disk('public')->exists($product->image)) {
+                    Storage::disk('public')->delete($product->image);
+                }
+
+                // Store new file
+                $validated['image'] = $request->file('image')->store('uploads/products', 'public');
+            } else {
+                // keep existing image if no new file uploaded
+                $validated['image'] = $product->image;
+            }
+
+            //  Perform the update
+            $product->update($validated);
+
+            return redirect()
+                ->route('inventory.products')
+                ->with('success', "Product {$product->name} updated successfully!");
+        });
     }
 
     /**
@@ -177,4 +122,40 @@ class InventoryController extends Controller
 
         return redirect()->route('inventory.products')->with('success', 'Product deleted successfully!');
     }
+
+    // Additional method to handle stock updates
+    public function updateStock(Request $request, string $id, string $action)
+    {
+        // validate action
+        if (! \in_array($action, ['add', 'reduce'])) {
+            return redirect()->route('inventory.products')->with('error', 'Invalid stock action.');
+        }
+
+        $product   = Product::findOrFail($id);
+        $validated = $request->validate([
+            'stock' => ['required', 'integer', 'min:0'],
+        ]);
+
+        if ($action === 'add') {
+            $newStock = $product->stock + $validated['stock'];
+
+        } else {
+            // validate; stock shouldnt be negative
+            if ($product->stock < $validated['stock'] || $validated['stock'] <= 0) {
+                return redirect()
+                    ->route('inventory.products')
+                    ->with('error', "Cannot reduce stock by {$validated['stock']} as it exceeds current stock of {$product->stock}.");
+            }
+            $newStock = $product->stock - $validated['stock'];
+        }
+
+        $product->update(['stock' => $newStock]);
+
+        return redirect()
+            ->route('inventory.products')
+            ->with('success', "Stock for {$product->name} updated successfully!");
+
+        // TODO: log stock change in a separate table for audit trail
+    }
+
 }
