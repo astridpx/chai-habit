@@ -27,7 +27,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // orders
     Route::get('/orders/all', [OrderController::class, 'index'])->name('orders');
-    // Route::get('/customers/new', [CustomerController::class, 'create'])->name('customers.new');
+    Route::get('/orders/create', [OrderController::class, 'create'])->name('orders.create');
 
     // customers - VIEW ONLY
     Route::get('/customers/list', [CustomerController::class, 'index'])->name('customers');
