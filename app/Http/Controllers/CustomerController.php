@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Http\Resources\CustomerResource;
 use App\Models\Customer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -11,12 +12,18 @@ class CustomerController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $customers = Customer::latest('created_at')->paginate(10);
+        $filter = $request->only(['search', 'address', 'email']);
+
+        $customers = Customer::latest('created_at')
+            ->filter($filter)
+            ->paginate(10)
+            ->withQueryString();
 
         return Inertia::render('Customers/Index', [
-            'customers' => $customers,
+            'customers' => CustomerResource::collection($customers),
+            'filters'   => $filter,
         ]);
     }
 
