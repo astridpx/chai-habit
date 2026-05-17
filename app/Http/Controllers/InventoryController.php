@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Http\Resources\ProductResource;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -14,9 +15,14 @@ class InventoryController extends Controller
      */
     public function index()
     {
-        $products = Product::latest('created_at')->paginate(10);
+        $filters  = request()->only(['name']);
+        $products = Product::latest('created_at')
+            ->filter($filters)
+            ->paginate(10)
+            ->withQueryString();
+
         return Inertia::render('Inventory/Index', [
-            'products' => $products,
+            'products' => ProductResource::collection($products),
         ]);
     }
 

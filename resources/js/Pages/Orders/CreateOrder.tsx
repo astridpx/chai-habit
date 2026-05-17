@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout'
-import { Head } from '@inertiajs/react'
+import { Head, PageProps, router } from '@inertiajs/react'
 import {
   Table,
   TableBody,
@@ -30,8 +30,8 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog'
-import { useState } from 'react'
+} from '@/Components/ui/dialog'
+import { useEffect, useMemo, useState } from 'react'
 import { Toggle } from '@/Components/ui/toggle'
 import { Label } from '@/Components/ui/label'
 import DatePicker from '@/Components/AppDatePicker'
@@ -45,9 +45,59 @@ import {
 } from '@/Components/ui/combobox'
 import { Textarea } from '@/Components/ui/textarea'
 import { Checkbox } from '@/Components/ui/checkbox'
+import { debounce } from 'lodash'
+import { useForm, usePage } from '@inertiajs/react'
+import { custom } from 'zod'
+import { is } from 'date-fns/locale'
 
-export default function CreateOrder() {
+interface ICreateOrderProps {
+  customers: Pagination<Customer>
+  customerFilters: { search?: string }
+  products: Pagination<Product>
+  productFilters: { name?: string }
+}
+
+export default function CreateOrder({
+  customers,
+  customerFilters,
+  products,
+  productFilters,
+}: ICreateOrderProps) {
+  const { flash } = usePage<PageProps>().props
+  console.log(products)
+
+  const [searchCustomer, setSearchCustomer] = useState(customerFilters?.search ?? '')
+  const [searchProduct, setSearchProduct] = useState(productFilters?.name ?? '')
+  const [selectedName, setSelectedName] = useState('')
   const [showAddItem, setShowAddItem] = useState(false)
+  const { data, setData, post, processing, errors, reset } = useForm({
+    customer_id: null,
+    note: null,
+    buying_method: 'walkin',
+    is_paid: false,
+  })
+
+  const debouncedSearch = useMemo(
+    () =>
+      debounce((value: string) => {
+        router.get(
+          route('orders.create'),
+          { search: value }, // query parameter for search
+          {
+            preserveState: true,
+            replace: true,
+          },
+        )
+      }, 300),
+    [],
+  )
+
+  useEffect(() => {
+    debouncedSearch(searchCustomer)
+
+    // Cleanup the timer if the component unmounts mid-type
+    return () => debouncedSearch.cancel()
+  }, [searchCustomer, debouncedSearch])
 
   const frameworks = ['Next.js', 'SvelteKit', 'Nuxt.js', 'Remix', 'Astro']
   const items = [
@@ -128,7 +178,7 @@ export default function CreateOrder() {
               <Table>
                 <TableHeader className="bg-muted">
                   <TableRow>
-                    <TableHead />
+                    {/* <TableHead /> */}
                     <TableHead>Product</TableHead>
                     <TableHead>Unit Price</TableHead>
                     <TableHead>Quantity</TableHead>
@@ -138,16 +188,14 @@ export default function CreateOrder() {
 
                 {
                   <TableBody>
-                    {invoices.map((invoice) => (
-                      <TableRow key={invoice.invoice}>
-                        <TableCell>
+                    {products?.data?.map((product) => (
+                      <TableRow key={product.id}>
+                        {/* <TableCell>
                           <Checkbox className="rounded" />
-                        </TableCell>
-                        <TableCell>{invoice.invoice}</TableCell>
+                        </TableCell> */}
+                        <TableCell>{product.name}</TableCell>
                         <TableCell>
-                          <Badge variant="outline">
-                            ${(invoice.total / invoice.item).toFixed(2)}
-                          </Badge>
+                          <Badge variant="outline">₱ {product.price.toFixed(2)}</Badge>
                         </TableCell>
                         <TableCell className="space-x-1">
                           <Button variant="secondary" className="border shadow-2xs">
@@ -184,75 +232,66 @@ export default function CreateOrder() {
       </div>
 
       {/* Order Information */}
-      <section className="lg:h-115 flex flex-col lg:flex-row items-stretch gap-5 border rounded-md p-5">
+      <section className="lg:h-95 flex flex-col lg:flex-row items-stretch gap-5 border rounded-md p-5">
         <div className="flex-2 ">
           <h3 className="font-semibold text-lg mb-6">Order Information</h3>
 
           <div className="flex items-center gap-6 w-full mb-6">
-            <div className="flex flex-col gap-3  flex-1">
-              <Label htmlFor="date">Order Date</Label>
-              <DatePicker placeholder="Select a date" />
-            </div>
-
             <div className="flex flex-col gap-3 flex-1">
               <Label htmlFor="orderNumber">Order Number</Label>
               <Input id="orderNumber" placeholder="Auto Generated" readOnly />
             </div>
-          </div>
-
-          <div className="flex flex-col gap-3 flex-1 mb-6">
-            <Label htmlFor="customer">Customer</Label>
-            <Combobox items={frameworks}>
-              <ComboboxInput placeholder="Search and select a customer..." />
-              <ComboboxContent>
-                <ComboboxEmpty>No person found.</ComboboxEmpty>
-                <ComboboxList>
-                  {(item: string) => (
-                    <ComboboxItem key={item} value={item}>
-                      {item}
-                    </ComboboxItem>
-                  )}
-                </ComboboxList>
-              </ComboboxContent>
-            </Combobox>
-          </div>
-
-          <div className="flex items-center gap-6 w-full mb-6">
-            <div className="flex flex-col gap-3  flex-1">
-              <Label htmlFor="paymentMethod">Payment Method</Label>
-              <Select items={items}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a payment method" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {items.map((item) => (
-                      <SelectItem key={item.value} value={item.value}>
-                        {item.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
-            </div>
 
             <div className="flex flex-col gap-3 flex-1">
               <Label htmlFor="paymentStatus">Payment Status</Label>
-              <Select items={items}>
+              <Select>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a payment status" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    {items.map((item) => (
-                      <SelectItem key={item.value} value={item.value}>
-                        {item.label}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="true">Paid</SelectItem>
+                    <SelectItem value="false">Unpaid</SelectItem>
                   </SelectGroup>
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="flex flex-col gap-3 flex-1 mb-6">
+            <Label htmlFor="customer">Customer</Label>
+            <Combobox
+              items={customers.data}
+              onValueChange={(id) => {
+                const found = customers.data.find((c) => c.id === id)
+                if (found) {
+                  // Inertia Form helper:
+                  // form.setData('customer_id', found.id);
+                  setSelectedName(found.fullname || '')
+                  console.log('To be sent to server:', found.id)
+                }
+              }}
+            >
+              <ComboboxInput
+                value={selectedName || searchCustomer}
+                placeholder="Search and select a customer..."
+                onChange={(e) => {
+                  //  If they click back in and start typing, break the lock so they can search again
+                  if (selectedName) setSelectedName('')
+                  setSearchCustomer(e.target.value)
+                }}
+              />
+              <ComboboxContent>
+                <ComboboxEmpty>No person found.</ComboboxEmpty>
+                <ComboboxList>
+                  {(customer) => (
+                    <ComboboxItem key={customer.id} value={customer.id}>
+                      {customer.fullname}
+                    </ComboboxItem>
+                  )}
+                </ComboboxList>
+              </ComboboxContent>
+            </Combobox>
           </div>
 
           <div className="flex flex-col gap-3 flex-1">
@@ -271,7 +310,7 @@ export default function CreateOrder() {
 
           <div className="flex items-center justify-between mb-4">
             <p>Subtotal</p>
-            <p>$0.00</p>
+            <p>₱0.00</p>
           </div>
 
           <div className="flex items-center justify-between w-full mb-4">
@@ -280,14 +319,14 @@ export default function CreateOrder() {
               <Input type="number" className="max-w-20 rounded-sm" placeholder="0.00" />
             </div>
 
-            <p className="flex-1 text-right">$0.00</p>
+            <p className="flex-1 text-right">₱0.00</p>
           </div>
 
           <Separator className="my-5" />
 
           <div className="flex items-center justify-between">
             <p className="font-semibold">Total</p>
-            <p className="text-xl font-bold">$0.00</p>
+            <p className="text-xl font-bold">₱0.00</p>
           </div>
         </div>
       </section>
@@ -321,7 +360,7 @@ export default function CreateOrder() {
                   <TableRow key={invoice.invoice}>
                     <TableCell>{invoice.invoice}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">${(invoice.total / invoice.item).toFixed(2)}</Badge>
+                      <Badge variant="outline">₱{(invoice.total / invoice.item).toFixed(2)}</Badge>
                     </TableCell>
                     <TableCell>{invoice.item}</TableCell>
                     <TableCell>{invoice.total}</TableCell>

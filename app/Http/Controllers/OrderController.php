@@ -1,6 +1,10 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Http\Resources\CustomerResource;
+use App\Http\Resources\ProductResource;
+use App\Models\Customer;
+use App\Models\Product;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -17,9 +21,27 @@ class OrderController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    public function create()
+    public function create(Request $request)
     {
-        return Inertia::render('Orders/CreateOrder');
+        $customerFilter = $request->only(['search']);
+        $productFilter  = $request->only(['name']);
+
+        $customers = Customer::latest('created_at')
+            ->filter($customerFilter)
+            ->paginate(10)
+            ->withQueryString();
+
+        $products = Product::latest('created_at')
+            ->filter($productFilter)
+            ->paginate(10)
+            ->withQueryString();
+
+        return Inertia::render('Orders/CreateOrder', [
+            'customers'       => CustomerResource::collection($customers),
+            'products'        => ProductResource::collection($products),
+            'customerFilters' => $customerFilter,
+            'productFilters'  => $productFilter,
+        ]);
     }
 
     /**
