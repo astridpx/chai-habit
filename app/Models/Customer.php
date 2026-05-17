@@ -16,6 +16,11 @@ class Customer extends Model implements HasMedia
      */
     public function scopeFilter(Builder $query, array $filters): Builder
     {
+
+        $query->when($filters['id'] ?? null, function ($sub, $id) {
+            $sub->where('id', $id);
+        });
+
         $query->when($filters['search'] ?? null, function ($q, $search) {
             $q->where(function ($inner) use ($search) {
                 $inner->where('firstname', 'like', "%{$search}%")
