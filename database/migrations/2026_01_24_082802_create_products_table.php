@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('name')->nullable(false);
             $table->enum('size', ['Small', 'Medium', 'Large'])->nullable(false);
             $table->text('description')->nullable();
-            $table->decimal('price', 5, 2);
+            $table->integer('price')->default(0);
             $table->integer('stock')->default(0);
             $table->softDeletes();
             $table->timestamps();
