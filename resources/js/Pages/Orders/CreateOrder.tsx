@@ -45,10 +45,9 @@ import {
 } from '@/Components/ui/combobox'
 import { Textarea } from '@/Components/ui/textarea'
 import { Checkbox } from '@/Components/ui/checkbox'
-import { debounce } from 'lodash'
+import { debounce, set } from 'lodash'
 import { useForm, usePage } from '@inertiajs/react'
 import { custom } from 'zod'
-import { is } from 'date-fns/locale'
 
 interface ICreateOrderProps {
   customers: Pagination<Customer>
@@ -64,19 +63,20 @@ export default function CreateOrder({
   productFilters,
 }: ICreateOrderProps) {
   const { flash } = usePage<PageProps>().props
-  console.log(products)
 
   const [searchCustomer, setSearchCustomer] = useState(customerFilters?.search ?? '')
   const [searchProduct, setSearchProduct] = useState(productFilters?.name ?? '')
   const [selectedName, setSelectedName] = useState('')
   const [showAddItem, setShowAddItem] = useState(false)
   const { data, setData, post, processing, errors, reset } = useForm({
-    customer_id: null,
-    note: null,
+    customer_id: null as null | number,
+    note: '',
     buying_method: 'walkin',
     is_paid: false,
+    items: [] as OrderItemForm[],
   })
 
+  // Search customers with debounce to avoid excessive requests while typing
   const debouncedSearch = useMemo(
     () =>
       debounce((value: string) => {
@@ -91,135 +91,139 @@ export default function CreateOrder({
       }, 300),
     [],
   )
-
   useEffect(() => {
     debouncedSearch(searchCustomer)
-
     // Cleanup the timer if the component unmounts mid-type
     return () => debouncedSearch.cancel()
   }, [searchCustomer, debouncedSearch])
 
-  const frameworks = ['Next.js', 'SvelteKit', 'Nuxt.js', 'Remix', 'Astro']
-  const items = [
-    { label: 'Light', value: 'light' },
-    { label: 'Dark', value: 'dark' },
-    { label: 'System', value: 'system' },
-  ]
+  // Add item to order
+  const [addOrderItemMsg, setOrderItemMsg] = useState('') //  error msg
+  function createOrderItem(
+    productId: number,
+    productName: string,
+    productPrice: number,
+    discount: number = 0,
+    totalPrice: number,
+  ) {
+    setOrderItemMsg('') // reset message
 
-  const invoices = [
-    {
-      invoice: 'INV-1001',
-      customer: 'Liam Henderson',
-      item: 8,
-      status: 'Pending',
-      paid: 'Unpaid',
-      total: 129.99,
-      date: '2024-01-04',
-      note: 'Deliver to side gate',
-    },
-    {
-      invoice: 'INV-1002',
-      customer: 'Sarah Jenkins',
-      item: 7,
-      status: 'Processing',
-      paid: 'Paid',
-      total: 45.5,
-      date: '2024-01-04',
-      note: 'Fragile',
-    },
-    {
-      invoice: 'INV-1003',
-      customer: 'Marcus Chen',
-      item: 1,
-      status: 'Shipped',
-      paid: 'Paid',
-      total: 399.0,
-      date: '2024-01-03',
-      note: '',
-    },
-    {
-      invoice: 'INV-1004',
-      customer: 'Emma Wilson',
-      item: 2,
-      status: 'Completed',
-      paid: 'Paid',
-      total: 250.0,
-      date: '2024-01-02',
-      note: 'Birthday gift',
-    },
-    {
-      invoice: 'INV-1005',
-      customer: 'James Rodriguez',
-      item: 4,
-      status: 'Cancelled',
-      paid: 'Refunded',
-      total: 180.0,
-      date: '2024-01-01',
-      note: 'Customer changed mind',
-    },
-  ]
+    const productExist = data.items?.find((item) => item.product_id === productId)
+    if (productExist) {
+      // If the product already exists in the order, update the quantity and total price
+      setOrderItemMsg('Product already added. Adjust quantity in the order summary.')
+      return
+    }
 
+    setData('items', [
+      ...(data.items || []),
+      {
+        product_id: productId,
+        product_name: productName,
+        productPrice: productPrice,
+        quantity: 1,
+        discount: discount,
+        total_price: totalPrice,
+      },
+    ])
+  }
+
+  // Handle quantity changes for order items
+  function handleQuantity(
+    productId: number,
+    action: 'increment' | 'decrement' | 'change',
+    value?: number,
+  ) {
+    const updatedItems = [...data.items]
+    const itemIndex = updatedItems.findIndex((i) => i.product_id === productId)
+
+    if (itemIndex !== -1) {
+      if (action === 'increment') {
+        updatedItems[itemIndex].quantity += 1
+      } else if (action === 'decrement') {
+        updatedItems[itemIndex].quantity -= 1
+      } else if (action === 'change' && value !== undefined) {
+        updatedItems[itemIndex].quantity = value
+      }
+
+      setData('items', updatedItems)
+    }
+  }
+
+  function onSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    post(route('orders.store'), {
+      onSuccess: (p) => reset(),
+      onError: (e) => {
+        console.log('Form submission error', e)
+      },
+    })
+  }
   return (
     <AuthenticatedLayout>
       {/* ADD PRODUCT ITEM DIALOG */}
       <Dialog open={showAddItem} onOpenChange={setShowAddItem}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Add Order Item</DialogTitle>
-            <DialogDescription>
-              Search and select products to add them to this order.
-            </DialogDescription>
-          </DialogHeader>
+        <DialogContent className="max-w-3xl  h-screen overflow-y-auto">
+          <div className="w-full">
+            <DialogHeader>
+              <DialogTitle>Add Order Item</DialogTitle>
+              <DialogDescription>
+                Search and select products to add them to this order.
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="mt-4">
-            <Input placeholder="Search products..." className="mb-4 shadow-sm border-2" />
+            <div className="mt-4">
+              <Input placeholder="Search products..." className="mb-4 shadow-sm border-2" />
 
-            <div className="border rounded-md overflow-hidden shadow-sm">
-              <Table>
-                <TableHeader className="bg-muted">
-                  <TableRow>
-                    {/* <TableHead /> */}
-                    <TableHead>Product</TableHead>
-                    <TableHead>Unit Price</TableHead>
-                    <TableHead>Quantity</TableHead>
-                    <TableHead>Action</TableHead>
-                  </TableRow>
-                </TableHeader>
+              <p className="text-destructive text-center pb-4 text-sm font-semibold">
+                {addOrderItemMsg}
+              </p>
 
-                {
-                  <TableBody>
-                    {products?.data?.map((product) => (
-                      <TableRow key={product.id}>
-                        {/* <TableCell>
+              <div className="border rounded-md overflow-hidden shadow-sm">
+                <Table>
+                  <TableHeader className="bg-muted">
+                    <TableRow>
+                      {/* <TableHead /> */}
+                      <TableHead>Product</TableHead>
+                      <TableHead>Unit Price</TableHead>
+                      <TableHead className="text-center -translate-x-9">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+
+                  {
+                    <TableBody>
+                      {products?.data?.map((product, index) => (
+                        <TableRow key={index}>
+                          {/* <TableCell>
                           <Checkbox className="rounded" />
                         </TableCell> */}
-                        <TableCell>{product.name}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">₱ {product.price.toFixed(2)}</Badge>
-                        </TableCell>
-                        <TableCell className="space-x-1">
-                          <Button variant="secondary" className="border shadow-2xs">
-                            -
-                          </Button>
-                          <Input
-                            type="number"
-                            className="max-w-20 rounded-sm outline-none focus-visible:ring-0"
-                            defaultValue={1}
-                          />
-                          <Button variant="secondary" className="border shadow-2xs">
-                            +
-                          </Button>
-                        </TableCell>
-                        <TableCell>
-                          <Button variant="outline" className="border shadow-2xs">
-                            Add to Order
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                }
-              </Table>
+                          <TableCell>{product.name}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline">₱ {product.price.toFixed(2)}</Badge>
+                          </TableCell>
+                          <TableCell className="flex items-center justify-center">
+                            <Button
+                              onClick={() =>
+                                createOrderItem(
+                                  product.id,
+                                  product.name,
+                                  product.price,
+                                  0,
+                                  product.price,
+                                )
+                              }
+                              variant="default"
+                              className="border shadow-2xs"
+                            >
+                              Add to Order
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  }
+                </Table>
+              </div>
             </div>
           </div>
         </DialogContent>
@@ -244,7 +248,7 @@ export default function CreateOrder({
 
             <div className="flex flex-col gap-3 flex-1">
               <Label htmlFor="paymentStatus">Payment Status</Label>
-              <Select>
+              <Select onValueChange={(value) => setData('is_paid', value === 'true')}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a payment status" />
                 </SelectTrigger>
@@ -266,9 +270,9 @@ export default function CreateOrder({
                 const found = customers.data.find((c) => c.id === id)
                 if (found) {
                   // Inertia Form helper:
-                  // form.setData('customer_id', found.id);
-                  setSelectedName(found.fullname || '')
-                  console.log('To be sent to server:', found.id)
+                  // console.log('To be sent to server:', found.id)
+                  setData('customer_id', found.id)
+                  setSelectedName(found.fullname || '') // text display only
                 }
               }}
             >
@@ -297,6 +301,9 @@ export default function CreateOrder({
           <div className="flex flex-col gap-3 flex-1">
             <Label htmlFor="notes">Notes (optional)</Label>
             <Textarea
+              id="notes"
+              value={data.note}
+              onChange={(e) => setData('note', e.target.value)}
               placeholder="Add any notes for this order..."
               className="min-h-20 resize-none"
             />
@@ -305,6 +312,7 @@ export default function CreateOrder({
 
         <Separator orientation="vertical" className="hidden lg:block " />
 
+        {/* ORDER SUMMARY */}
         <div className="flex-1 text-sm">
           <h3 className="font-semibold text-lg mb-6 mt-4">Order Summary</h3>
 
@@ -331,6 +339,7 @@ export default function CreateOrder({
         </div>
       </section>
 
+      {/* ORDER ITEM SECTION */}
       <section className="border rounded-md p-5 mt-4">
         <h3 className="font-semibold text-lg mb-6">Order Items</h3>
 
@@ -354,18 +363,56 @@ export default function CreateOrder({
               </TableRow>
             </TableHeader>
 
-            {1 === 2 ? (
+            {data.items?.length ? (
               <TableBody>
-                {invoices.map((invoice) => (
-                  <TableRow key={invoice.invoice}>
-                    <TableCell>{invoice.invoice}</TableCell>
+                {data.items?.map((item) => (
+                  <TableRow key={item.product_id}>
+                    <TableCell>{item.product_name}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">₱{(invoice.total / invoice.item).toFixed(2)}</Badge>
+                      <Badge variant="outline">₱{item.productPrice.toFixed(2)}</Badge>
                     </TableCell>
-                    <TableCell>{invoice.item}</TableCell>
-                    <TableCell>{invoice.total}</TableCell>
+                    {/* <TableCell>{items.quantity}</TableCell> */}
+                    <TableCell className="space-x-1">
+                      <Button
+                        onClick={() => handleQuantity(item.product_id, 'decrement')}
+                        variant="secondary"
+                        className="border shadow-2xs"
+                      >
+                        -
+                      </Button>
+                      <Input
+                        type="number"
+                        className="max-w-15 rounded-sm outline-none focus-visible:ring-0"
+                        defaultValue={1}
+                        max={99} // TODO - set max to available stock quantity for the product
+                        value={item.quantity}
+                        onChange={(e) =>
+                          handleQuantity(item.product_id, 'change', parseInt(e.target.value) || 0)
+                        }
+                      />
+                      <Button
+                        onClick={() => handleQuantity(item.product_id, 'increment')}
+                        variant="secondary"
+                        className="border shadow-2xs"
+                      >
+                        +
+                      </Button>
+                    </TableCell>
+                    <TableCell>₱{item.total_price.toFixed(2)}</TableCell>
                     <TableCell>
-                      <Button variant="ghost" size="sm">
+                      <Button
+                        onClick={() =>
+                          setData(
+                            'items',
+                            data.items.filter(
+                              (_, i) =>
+                                i !== data.items.findIndex((v) => v.product_id === item.product_id),
+                            ),
+                          )
+                        }
+                        variant="ghost"
+                        size="sm"
+                      >
                         <Trash />
                       </Button>
                     </TableCell>
@@ -387,6 +434,18 @@ export default function CreateOrder({
           </Table>
         </div>
       </section>
+
+      <Separator className="my-4" />
+
+      <div className=" flex justify-between  items-center ">
+        <Button variant="outline" className="border shadow-2xs">
+          Cancel
+        </Button>
+
+        <Button type="submit" onClick={onSubmit} className="">
+          Create Order
+        </Button>
+      </div>
     </AuthenticatedLayout>
   )
 }

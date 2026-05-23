@@ -39,62 +39,23 @@ import {
 import AppDatePicker from '@/Components/AppDatePicker'
 import { useState } from 'react'
 import { Toggle } from '@/Components/ui/toggle'
+import { format } from 'date-fns'
 
-const invoices = [
-  {
-    invoice: 'INV-1001',
-    customer: 'Liam Henderson',
-    item: 8,
-    status: 'Pending',
-    paid: 'Unpaid',
-    total: 129.99,
-    date: '2024-01-04',
-    note: 'Deliver to side gate',
-  },
-  {
-    invoice: 'INV-1002',
-    customer: 'Sarah Jenkins',
-    item: 7,
-    status: 'Processing',
-    paid: 'Paid',
-    total: 45.5,
-    date: '2024-01-04',
-    note: 'Fragile',
-  },
-  {
-    invoice: 'INV-1003',
-    customer: 'Marcus Chen',
-    item: 1,
-    status: 'Shipped',
-    paid: 'Paid',
-    total: 399.0,
-    date: '2024-01-03',
-    note: '',
-  },
-  {
-    invoice: 'INV-1004',
-    customer: 'Emma Wilson',
-    item: 2,
-    status: 'Completed',
-    paid: 'Paid',
-    total: 250.0,
-    date: '2024-01-02',
-    note: 'Birthday gift',
-  },
-  {
-    invoice: 'INV-1005',
-    customer: 'James Rodriguez',
-    item: 4,
-    status: 'Cancelled',
-    paid: 'Refunded',
-    total: 180.0,
-    date: '2024-01-01',
-    note: 'Customer changed mind',
-  },
-]
-
-export default function Orders() {
+export default function Orders({ orders }: { orders: Pagination<Order> }) {
   const [showFilter, setShowFilter] = useState(false)
+
+  // count total items in an order by summing up the quantity of each order item
+  function countItems(orderItems: OrderItem[]) {
+    const count = orderItems.reduce((total, item) => total + item.quantity, 0)
+    return count
+  }
+
+  // calculate total price of an order by summing up the total_price of each order item
+  function calculateTotal(orderItems: OrderItem[]) {
+    const total = orderItems.reduce((sum, item) => sum + item.total_price, 0)
+    return total
+  }
+
   return (
     <AuthenticatedLayout>
       <Head title="Orders" />
@@ -158,7 +119,7 @@ export default function Orders() {
         )}
 
         <Table>
-          <TableCaption>A list of your recent invoices.</TableCaption>
+          <TableCaption>A list of your recent orders.</TableCaption>
           <TableHeader>
             <TableRow>
               <TableHead>Invoice</TableHead>
@@ -172,24 +133,24 @@ export default function Orders() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {invoices.map((invoice) => (
-              <TableRow key={invoice.invoice}>
+            {orders.data?.map((order) => (
+              <TableRow key={order.id}>
                 <TableCell>
                   <a href="#" className="hover:text-primary hover:underline">
-                    {invoice.invoice}
+                    {order.order_id}
                   </a>
                 </TableCell>
                 <TableCell>
                   <a href="#" className="hover:text-primary hover:underline">
-                    {invoice.customer}
+                    {order.customer.fullname}
                   </a>
                 </TableCell>
-                <TableCell>{invoice.item}</TableCell>
-                <TableCell>{invoice.status}</TableCell>
-                {/* <TableCell>{invoice.paid}</TableCell> */}
-                <TableCell>{invoice.total}</TableCell>
-                <TableCell>{invoice.date}</TableCell>
-                <TableCell>{invoice.note}</TableCell>
+                <TableCell>{countItems(order.order_items)}</TableCell>
+                <TableCell>{order.status}</TableCell>
+                {/* <TableCell>{order.paid}</TableCell> */}
+                <TableCell>₱ {calculateTotal(order.order_items).toFixed(2)}</TableCell>
+                <TableCell>{format(new Date(order.created_at), 'MMMM dd, yyyy hh:mm a')}</TableCell>
+                <TableCell>{order.note}</TableCell>
               </TableRow>
             ))}
           </TableBody>

@@ -14,7 +14,7 @@ return new class extends Migration
     {
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
-            $table->uuid('order_id')->unique();
+            $table->string('order_id')->unique();
             $table->foreignId('customer_id')->constrained();
             $table->foreignId('process_by')->references('id')->on('users');
             $table->enum('status', ['pending', 'processing', 'completed', 'cancelled'])->default('pending');

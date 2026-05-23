@@ -81,6 +81,44 @@ declare global {
     created_at: string
     updated_at: string
   }
+
+  // Order and OrderItem interfaces for useForm in CreateOrder page
+  interface OrderItemForm {
+    product_name: string // for display purposes
+    productPrice: number // for display purposes
+    product_id: number
+    quantity: number
+    discount: number
+    total_price: number
+  }
+
+  interface OrderItem {
+    id: number
+    order_id: string
+    product_id: number
+    total_price: number
+    quantity: number
+    discount: number
+    created_at: string
+    updated_at: string
+  }
+
+  interface Order {
+    id: number
+    order_id: string
+    customer_id: number
+    process_by: number
+    status: 'pending' | 'completed' | 'cancelled'
+    note: string
+    buying_method: 'online' | 'walkin'
+    is_paid: number
+    completed_at: string | null
+    created_at: string
+    updated_at: string
+
+    customer: Customer
+    order_items: OrderItem[]
+  }
 }
 
 export {}
