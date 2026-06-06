@@ -28,10 +28,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // orders
     Route::get('/orders/all', [OrderController::class, 'index'])->name('orders');
     Route::get('/orders/create', [OrderController::class, 'create'])->name('orders.create');
-    Route::get('/orders/{id}', [OrderController::class, 'edit'])->name('orders.update');
+    Route::get('/orders/{id}', [OrderController::class, 'edit'])->name('orders.edit');
 
     // order - APIs
     Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
+    Route::post('/orders/{id}', [OrderController::class, 'update'])->name('orders.update');
 
     // customers - VIEW ONLY
     Route::get('/customers/list', [CustomerController::class, 'index'])->name('customers');

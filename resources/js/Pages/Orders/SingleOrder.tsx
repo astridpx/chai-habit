@@ -113,7 +113,7 @@ export default function SingleOrder({
     () =>
       debounce((value: string) => {
         router.get(
-          id ? route('orders.update', { id }) : route('orders.create'),
+          id ? route('orders.edit', { id }) : route('orders.create'),
           { search: value }, // query parameter for search
           {
             preserveState: true,
@@ -185,7 +185,6 @@ export default function SingleOrder({
   // Calculate order totals
   useEffect(() => {
     const subTotal = data.items.reduce((acc, curr) => acc + curr.productPrice * curr.quantity, 0)
-    console.log(subTotal)
 
     setOrderTotal({
       subTotal,
@@ -195,8 +194,14 @@ export default function SingleOrder({
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault()
-    post(route('orders.store'), {
-      onSuccess: (p) => reset(),
+    post(id ? route('orders.update', id as string) : route('orders.store'), {
+      onSuccess: (p) => {
+        if (!id) {
+          setSearchCustomer('')
+          setSelectedName('')
+          reset()
+        }
+      },
       onError: (e) => {
         console.log('Form submission error', e)
       },
@@ -291,7 +296,10 @@ export default function SingleOrder({
 
             <div className="flex flex-col gap-3 flex-1">
               <Label htmlFor="paymentStatus">Payment Status</Label>
-              <Select onValueChange={(value) => setData('is_paid', value === 'true')}>
+              <Select
+                value={data.is_paid ? 'true' : 'false'}
+                onValueChange={(value) => setData('is_paid', value === 'true')}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a payment status" />
                 </SelectTrigger>
@@ -307,6 +315,7 @@ export default function SingleOrder({
 
           <div className="flex flex-col gap-3 flex-1 mb-6">
             <Label htmlFor="customer">Customer</Label>
+            {selectedName}-{searchCustomer}
             <Combobox
               items={customers.data}
               onValueChange={(id) => {
@@ -486,7 +495,7 @@ export default function SingleOrder({
         </Button>
 
         <Button type="submit" onClick={onSubmit} className="">
-          Create Order
+          {id ? 'Update' : 'Create'} Order
         </Button>
       </div>
     </AuthenticatedLayout>

@@ -63,7 +63,7 @@ class OrderController extends Controller
             'buying_method'      => 'required|in:online,walkin',
             'is_paid'            => 'required|boolean',
             // Order items
-            'items'              => 'required|array',
+            'items'              => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity'   => 'required|integer|min:1',
             'items.*.discount'   => 'nullable|integer|min:0',
@@ -146,7 +146,69 @@ class OrderController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
+        $order = Order::findOrFail($id);
+
+        $validated = $request->validate([
+            // Order details
+            'customer_id'        => 'required|exists:customers,id',
+            'note'               => 'required|string',
+            'buying_method'      => 'required|in:online,walkin',
+            'is_paid'            => 'required|boolean',
+            // Order items
+            'items'              => 'required|array',
+            'items.*.product_id' => 'required|exists:products,id',
+            'items.*.quantity'   => 'required|integer|min:1',
+            'items.*.discount'   => 'nullable|integer|min:0',
+        ]);
+
+        return DB::transaction(function () use ($request, $order, $validated, $id) {
+            // update order
+            $order->update([
+                'customer_id'   => $validated['customer_id'],
+                'process_by'    => Auth::id(), // Use the authenticated user's ID
+                'note'          => $validated['note'],
+                'buying_method' => $validated['buying_method'],
+            ]);
+
+            $productIds = collect($validated['items'])->pluck('product_id');
+
+            $products = Product::whereIn('id', $productIds)
+                ->get()
+                ->keyBy('id');
+
+            $records = collect($validated['items'])->map(function ($item) use ($products, $order) {
+                $product = $products->get($item['product_id']);
+
+                $totalPrice = ($product->price * $item['quantity'])
+                     - ($item['discount'] ?? 0);
+
+                return [
+                    'order_id'    => $order['order_id'],
+                    'product_id'  => $item['product_id'],
+                    'quantity'    => $item['quantity'],
+                    'discount'    => $item['discount'] ?? 0,
+                    'total_price' => $totalPrice,
+                ];
+            })->values()->toArray();
+
+            // Create/Update order item
+            OrderItem::upsert(
+                $records,
+                ['order_id', 'product_id'],
+                ['quantity', 'discount', 'total_price']
+            );
+
+            // dd($records);
+
+            // Handle removed order item
+            OrderItem::where('order_id', $order['order_id'])
+                ->whereNotIn('product_id', $productIds)
+                ->delete();
+
+            return redirect()
+                ->route('orders.edit', $id)
+                ->with('success', "Order updated successfully!");
+        });
     }
 
     /**
