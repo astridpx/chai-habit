@@ -43,7 +43,7 @@ class OrderController extends Controller
             ->paginate(10)
             ->withQueryString();
 
-        return Inertia::render('Orders/CreateOrder', [
+        return Inertia::render('Orders/SingleOrder', [
             'customers'       => CustomerResource::collection($customers),
             'products'        => ProductResource::collection($products),
             'customerFilters' => $customerFilter,
@@ -114,9 +114,31 @@ class OrderController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(string $id)
+    public function edit(string $id, Request $request)
     {
-        //
+        $customerFilter = $request->only(['search']);
+        $productFilter  = $request->only(['name']);
+
+        $order = Order::with(['customer', 'orderItems.product'])->findOrFail($id);
+
+        $customers = Customer::latest('created_at')
+            ->filter($customerFilter)
+            ->paginate(10)
+            ->withQueryString();
+
+        $products = Product::latest('created_at')
+            ->filter($productFilter)
+            ->paginate(10)
+            ->withQueryString();
+
+        return Inertia::render('Orders/SingleOrder', [
+            'customers'       => CustomerResource::collection($customers),
+            'products'        => ProductResource::collection($products),
+            'customerFilters' => $customerFilter,
+            'productFilters'  => $productFilter,
+            'order'           => $order,
+            'id'              => $id,
+        ]);
     }
 
     /**

@@ -47,28 +47,34 @@ import { Textarea } from '@/Components/ui/textarea'
 import { Checkbox } from '@/Components/ui/checkbox'
 import { debounce, set } from 'lodash'
 import { useForm, usePage } from '@inertiajs/react'
-import { custom } from 'zod'
 
-interface ICreateOrderProps {
+interface ISingleOrderProps {
   customers: Pagination<Customer>
   customerFilters: { search?: string }
   products: Pagination<Product>
   productFilters: { name?: string }
+  order: Order
 }
 
-export default function CreateOrder({
+export default function SingleOrder({
   customers,
   customerFilters,
   products,
   productFilters,
-}: ICreateOrderProps) {
-  const { flash } = usePage<PageProps>().props
+  order,
+}: ISingleOrderProps) {
+  const { flash, id } = usePage<PageProps>().props
 
+  const [orderTotal, setOrderTotal] = useState({
+    subTotal: 0,
+    total: 0,
+  })
   const [searchCustomer, setSearchCustomer] = useState(customerFilters?.search ?? '')
   const [searchProduct, setSearchProduct] = useState(productFilters?.name ?? '')
   const [selectedName, setSelectedName] = useState('')
   const [showAddItem, setShowAddItem] = useState(false)
   const { data, setData, post, processing, errors, reset } = useForm({
+    order_id: '',
     customer_id: null as null | number,
     note: '',
     buying_method: 'walkin',
@@ -76,12 +82,38 @@ export default function CreateOrder({
     items: [] as OrderItemForm[],
   })
 
+  // Set initial form data when editing an existing order
+  useEffect(() => {
+    if (id) {
+      interface OrderItemWithProduct extends OrderItem {
+        product: Product
+      }
+
+      setData({
+        order_id: order.order_id,
+        customer_id: order.customer_id,
+        note: order.note,
+        buying_method: order.buying_method,
+        is_paid: Boolean(order.is_paid),
+        items: (order.order_items as OrderItemWithProduct[]).map((item) => ({
+          product_id: item.product_id,
+          product_name: item.product.name,
+          productPrice: item.product.price,
+          quantity: item.quantity,
+          discount: item.discount,
+          total_price: item.total_price,
+        })),
+      })
+      setSelectedName(order.customer.fullname || '')
+    }
+  }, [id])
+
   // Search customers with debounce to avoid excessive requests while typing
   const debouncedSearch = useMemo(
     () =>
       debounce((value: string) => {
         router.get(
-          route('orders.create'),
+          id ? route('orders.update', { id }) : route('orders.create'),
           { search: value }, // query parameter for search
           {
             preserveState: true,
@@ -149,6 +181,17 @@ export default function CreateOrder({
       setData('items', updatedItems)
     }
   }
+
+  // Calculate order totals
+  useEffect(() => {
+    const subTotal = data.items.reduce((acc, curr) => acc + curr.productPrice * curr.quantity, 0)
+    console.log(subTotal)
+
+    setOrderTotal({
+      subTotal,
+      total: subTotal, // TODO adjust - deduct with discount
+    })
+  }, [data.items])
 
   function onSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -243,7 +286,7 @@ export default function CreateOrder({
           <div className="flex items-center gap-6 w-full mb-6">
             <div className="flex flex-col gap-3 flex-1">
               <Label htmlFor="orderNumber">Order Number</Label>
-              <Input id="orderNumber" placeholder="Auto Generated" readOnly />
+              <Input value={data.order_id} id="orderNumber" placeholder="Auto Generated" readOnly />
             </div>
 
             <div className="flex flex-col gap-3 flex-1">
@@ -318,13 +361,13 @@ export default function CreateOrder({
 
           <div className="flex items-center justify-between mb-4">
             <p>Subtotal</p>
-            <p>₱0.00</p>
+            <p>₱{orderTotal.subTotal.toFixed(2)}</p>
           </div>
 
           <div className="flex items-center justify-between w-full mb-4">
             <div className="flex items-center justify-between  flex-2 pr-2">
               <p>Discount</p>
-              <Input type="number" className="max-w-20 rounded-sm" placeholder="0.00" />
+              <Input type="number" disabled className="max-w-20 rounded-sm" placeholder="0.00" />
             </div>
 
             <p className="flex-1 text-right">₱0.00</p>
@@ -334,7 +377,7 @@ export default function CreateOrder({
 
           <div className="flex items-center justify-between">
             <p className="font-semibold">Total</p>
-            <p className="text-xl font-bold">₱0.00</p>
+            <p className="text-xl font-bold">₱{orderTotal.total.toFixed(2)}</p>
           </div>
         </div>
       </section>

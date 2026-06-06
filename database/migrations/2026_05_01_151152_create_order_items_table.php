@@ -17,6 +17,8 @@ return new class extends Migration
             $table->string('order_id');
             $table->foreign('order_id')->references('order_id')->on('orders')->onDelete('cascade');
             $table->foreignId('product_id')->constrained();
+            $table->unique(['order_id', 'product_id']); // Ensure unique product per order
+
             $table->integer('total_price');
             $table->integer('quantity');
             $table->integer('discount')->default(0);

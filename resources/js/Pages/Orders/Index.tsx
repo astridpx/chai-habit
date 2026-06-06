@@ -29,6 +29,7 @@ import {
 import { Badge } from '@/Components/ui/badge'
 import { Separator } from '@/Components/ui/separator'
 import { Button } from '@/Components/ui/button'
+import { Checkbox } from '@/Components/ui/checkbox'
 import {
   Select,
   SelectContent,
@@ -78,8 +79,8 @@ export default function Orders({ orders }: { orders: Pagination<Order> }) {
 
       <div className="">
         {showFilter && (
-          <div className="mb-8 space-y-1">
-            <div className="flex gap-2">
+          <div className="mb-12 space-y-4">
+            <div className="flex gap-4">
               <Input className=" bg-neutral-100" placeholder="Search by invoice" />
               <Input className=" bg-neutral-100" placeholder="Search by customer" />
               <Select>
@@ -119,10 +120,14 @@ export default function Orders({ orders }: { orders: Pagination<Order> }) {
         )}
 
         <Table>
-          <TableCaption>A list of your recent orders.</TableCaption>
+          <TableCaption>A list of your orders.</TableCaption>
           <TableHeader>
             <TableRow>
-              <TableHead>Invoice</TableHead>
+              <TableHead>
+                <Checkbox />
+              </TableHead>
+
+              <TableHead>Order ID</TableHead>
               <TableHead>Customer</TableHead>
               <TableHead>Item</TableHead>
               <TableHead>Status</TableHead>
@@ -136,7 +141,11 @@ export default function Orders({ orders }: { orders: Pagination<Order> }) {
             {orders.data?.map((order) => (
               <TableRow key={order.id}>
                 <TableCell>
-                  <a href="#" className="hover:text-primary hover:underline">
+                  <Checkbox />
+                </TableCell>
+
+                <TableCell>
+                  <a href={`/orders/${order.id}`} className="hover:text-primary hover:underline">
                     {order.order_id}
                   </a>
                 </TableCell>
