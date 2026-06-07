@@ -36,6 +36,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/Components/ui/dropdown-menu'
+import { usePage } from '@inertiajs/react'
+import { useEffect, useState } from 'react'
 
 // nav items.
 const items = [
@@ -48,6 +50,7 @@ const items = [
     title: 'Orders',
     url: '/orders',
     icon: Inbox,
+    prefix: 'orders',
     child: [
       {
         title: 'All Orders',
@@ -67,6 +70,7 @@ const items = [
   {
     title: 'Inventory',
     icon: Package,
+    prefix: 'inventory',
     child: [
       {
         title: 'Product List',
@@ -85,6 +89,7 @@ const items = [
   {
     title: 'Customers',
     icon: UsersRound,
+    prefix: 'customers',
     child: [
       {
         title: 'Customer List',
@@ -99,6 +104,7 @@ const items = [
   {
     title: 'Reports',
     icon: BarChart3,
+    prefix: 'reports',
     child: [
       {
         title: 'Transaction History',
@@ -113,6 +119,7 @@ const items = [
   {
     title: 'Logs',
     icon: ClipboardList,
+    prefix: 'logs',
     child: [
       {
         title: 'User Activity',
@@ -133,6 +140,12 @@ const items = [
 
 export function AppSidebar() {
   const { isMobile } = useSidebar()
+  const { url } = usePage()
+  const [openItems, setOpenItems] = useState<Record<string, boolean>>({})
+  const [prefix, setPrefix] = useState('')
+  useEffect(() => {
+    setPrefix(url.split('?')[0].split('/')[1])
+  }, [])
 
   return (
     <Sidebar>
@@ -147,10 +160,20 @@ export function AppSidebar() {
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) =>
+              {items.map((item, i) =>
                 item.child ? (
                   // dropdown nav item
-                  <Collapsible key={item.title} className="group/collapsible">
+                  <Collapsible
+                    open={openItems[item.title] ?? item.prefix === prefix}
+                    onOpenChange={(open) =>
+                      setOpenItems((prev) => ({
+                        ...prev,
+                        [item.title]: open,
+                      }))
+                    }
+                    key={item.title}
+                    className="group/collapsible"
+                  >
                     <SidebarMenuItem>
                       <CollapsibleTrigger asChild>
                         {/* Added hover:bg-transparent and hover:text-current to keep text color stable */}
