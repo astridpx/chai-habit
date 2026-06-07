@@ -59,7 +59,7 @@ class OrderController extends Controller
         $validated = $request->validate([
             // Order details
             'customer_id'        => 'required|exists:customers,id',
-            'note'               => 'required|string',
+            'note'               => 'string',
             'buying_method'      => 'required|in:online,walkin',
             'is_paid'            => 'required|boolean',
             // Order items
