@@ -25,37 +25,47 @@ Route::middleware(['auth', 'verified'])->group(function () {
         return Inertia::render('Dashboard');
     })->name('dashboard');
 
-    // orders
-    Route::get('/orders/all', [OrderController::class, 'index'])->name('orders');
-    Route::get('/orders/create', [OrderController::class, 'create'])->name('orders.create');
-    Route::get('/orders/{id}', [OrderController::class, 'edit'])->name('orders.edit');
+    // ***** Orders ******
+    Route::prefix('orders')->group(function () {
+        //  VIEW
+        Route::get('/all', [OrderController::class, 'index'])->name('orders');
+        Route::get('/create', [OrderController::class, 'create'])->name('orders.create');
+        Route::get('/{id}', [OrderController::class, 'edit'])->name('orders.edit');
 
-    // order - APIs
-    Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
-    Route::post('/orders/{id}', [OrderController::class, 'update'])->name('orders.update');
+        // APIs
+        Route::post('/', [OrderController::class, 'store'])->name('orders.store');
+        Route::post('/{id}', [OrderController::class, 'update'])->name('orders.update');
+    });
 
-    // customers - VIEW ONLY
-    Route::get('/customers/list', [CustomerController::class, 'index'])->name('customers');
-    Route::get('/customers/new', [CustomerController::class, 'create'])->name('customers.new');
+    // ***** Customers ******
+    Route::prefix('customers')->group(function () {
+        //  VIEW
+        Route::get('/list', [CustomerController::class, 'index'])->name('customers');
+        Route::get('/new', [CustomerController::class, 'create'])->name('customers.new');
 
-    // Customer - APIs
-    Route::post('/customers', [CustomerController::class, 'store'])->name('customers.store');
-    Route::delete('/customers/{id}', [CustomerController::class, 'destroy'])->name('customers.destroy');
+        // APIs
+        Route::post('/', [CustomerController::class, 'store'])->name('customers.store');
+        Route::delete('/{id}', [CustomerController::class, 'destroy'])->name('customers.destroy');
+    });
 
-    // inventory
-    Route::get('/inventory/products', [InventoryController::class, 'index'])->name('inventory.products');
-    Route::get('/inventory/products/add', [InventoryController::class, 'create'])->name('inventory.products.add');
-    Route::get('/inventory/products/stock', [InventoryController::class, 'stock'])->name('inventory.product.stock');
-    // Route::get('/inventory/products/stock/add', [InventoryController::class, 'addStock'])->name('inventory.products.stock.add');
+    // ***** Inventory ******
+    Route::prefix('inventory')->group(function () {
+        // View
+        Route::get('/products', [InventoryController::class, 'index'])->name('inventory.products');
+        Route::get('/products/add', [InventoryController::class, 'create'])->name('inventory.products.add');
+        Route::get('/products/stock', [InventoryController::class, 'stock'])->name('inventory.product.stock');
+        // Route::get('/products/stock/add', [InventoryController::class, 'addStock'])->name('inventory.products.stock.add');
 
-    // Inventory - APIs
-    Route::post('/inventory/products/add', [InventoryController::class, 'store'])->name('inventory.products.store');
-    Route::delete('/inventory/products/{id}', [InventoryController::class, 'destroy'])->name('inventory.products.destroy');
-    Route::post('/inventory/products/{id}', [InventoryController::class, 'update'])->name('inventory.products.update');
-    // update a product stock
-    Route::post('/inventory/products/stock/{id}/{action}', [InventoryController::class, 'updateStock'])->name('inventory.products.updateStock');
+        //  APIs
+        Route::post('/products/add', [InventoryController::class, 'store'])->name('inventory.products.store');
+        Route::delete('/products/{id}', [InventoryController::class, 'destroy'])->name('inventory.products.destroy');
+        Route::post('/products/{id}', [InventoryController::class, 'update'])->name('inventory.products.update');
 
-    // reports
+        // update a product stock
+        Route::post('/products/stock/{id}/{action}', [InventoryController::class, 'updateStock'])->name('inventory.products.updateStock');
+    });
+
+    // ***** REPORTS *****
     Route::get('/reports/inventory-analysis', [ReportController::class, 'inventoryAnalysis'])->name('reports.inventory-analysis');
     // Route::get('/reports/transactions', [InventoryController::class, 'transactions'])->name('reports.transactions');
 });
