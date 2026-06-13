@@ -26,6 +26,20 @@ class OrderController extends Controller
     }
 
     /**
+     * Display a listing of the recent orders.
+     */
+    public function recent()
+    {
+        $order = Order::with(['customer', 'orderItems'])
+            ->where('status', 'pending')
+            ->latest('created_at')
+            ->paginate(10);
+        return Inertia::render('Orders/RecentOrders', [
+            'orders' => $order,
+        ]);
+    }
+
+    /**
      * Show the form for creating a new resource.
      */
     public function create(Request $request)

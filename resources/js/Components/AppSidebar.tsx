@@ -57,8 +57,8 @@ const items = [
         url: '/orders/all',
       },
       {
-        title: 'Pending Shipments',
-        url: '/orders/pending',
+        title: 'Recent Orders',
+        url: '/orders/recent',
       },
 
       {

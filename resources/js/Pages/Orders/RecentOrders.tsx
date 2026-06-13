@@ -44,7 +44,7 @@ import { Toggle } from '@/Components/ui/toggle'
 import { format } from 'date-fns'
 
 export default function Orders({ orders }: { orders: Pagination<Order> }) {
-  const [showFilter, setShowFilter] = useState(false)
+  const [showActions, setshowActions] = useState(false)
 
   // count total items in an order by summing up the quantity of each order item
   function countItems(orderItems: OrderItem[]) {
@@ -65,68 +65,43 @@ export default function Orders({ orders }: { orders: Pagination<Order> }) {
   }
   return (
     <AuthenticatedLayout>
-      <Head title="Orders" />
+      <Head title="Recent Orders" />
 
       <div className="flex justify-between">
-        <h1 className="mb-6 text-3xl font-semibold text-neutral-600">Orders</h1>
+        <h1 className="mb-6 text-3xl font-semibold text-neutral-600"> Recent Orders</h1>
 
         <div>
           <Toggle
             aria-label="Filter"
             size="sm"
             variant="outline"
-            onPressedChange={(pressed) => setShowFilter(pressed)}
+            onPressedChange={(pressed) => setshowActions(pressed)}
           >
             <Funnel className="group-data-[state=on]/toggle:fill-foreground" />
-            Filter
+            Bulk Actions
           </Toggle>
         </div>
       </div>
 
       <div className="">
-        {showFilter && (
+        {showActions && (
           <div className="mb-12 space-y-4">
             <div className="flex gap-4">
-              <Input className=" bg-neutral-100" placeholder="Search by invoice" />
-              <Input className=" bg-neutral-100" placeholder="Search by customer" />
-              <Select>
-                <SelectTrigger className="bg-neutral-100">
-                  <SelectValue placeholder="Search by status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="light">pending</SelectItem>
-                  <SelectItem value="dark">processing</SelectItem>
-                  <SelectItem value="system">shipped</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex gap-4 items-center mb-4">
-              <AppDatePicker
-                attr="startDateFilter"
-                placeholder="Start date"
-                mainClass="flex-1"
-                triggerClass="bg-neutral-100"
-              />
-              <span>to</span>
-              <AppDatePicker
-                attr="endDateFilter"
-                placeholder="End date"
-                mainClass="flex-1"
-                triggerClass="bg-neutral-100"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Button className="w-full">Apply Filter</Button>
-              <Button className="w-full" variant="destructive">
-                Clear
+              <Button variant="warning" className="flex-1">
+                Processing
+              </Button>
+              <Button variant="success" className="flex-1">
+                Completed
+              </Button>
+              <Button variant="destructive" className="flex-1">
+                Cancelled
               </Button>
             </div>
           </div>
         )}
 
         <Table>
-          <TableCaption>A list of your orders.</TableCaption>
+          <TableCaption>A list of your recent orders.</TableCaption>
           <TableHeader>
             <TableRow>
               <TableHead>

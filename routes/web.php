@@ -29,6 +29,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::prefix('orders')->group(function () {
         //  VIEW
         Route::get('/all', [OrderController::class, 'index'])->name('orders');
+        Route::get('/recent', [OrderController::class, 'recent'])->name('orders.recent');
         Route::get('/create', [OrderController::class, 'create'])->name('orders.create');
         Route::get('/{id}', [OrderController::class, 'edit'])->name('orders.edit');
 
